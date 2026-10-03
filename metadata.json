@@ -1,0 +1,6 @@
+{
+  "name": "The Tiebreaker",
+  "description": "A decision-analysis workbench featuring weighted pros and cons, multi-option comparison matrices, scenarios, and strategic SWOT analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["SERVER_SIDE_DECISION_ANALYSIS"]
+}

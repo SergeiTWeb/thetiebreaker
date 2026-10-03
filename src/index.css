@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Iowan Old Style', Baskerville, 'Times New Roman', serif;
+    --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: #0F172A;
+    background-color: #F8FAFC;
+    transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1), color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .dark body {
+    color: #F1F5F9;
+    background-color: #090D16;
+  }
+
+  h1, h2, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  .font-mono, .tabular-nums {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 4px;
+  background: #0F172A;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+  margin-top: -5px;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark input[type="range"]::-webkit-slider-thumb {
+  background: #3B82F6;
+  border: 2px solid #0F172A;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: #2563EB;
+  transform: scale(1.08);
+}
+
+.dark input[type="range"]:hover::-webkit-slider-thumb {
+  background: #60A5FA;
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
