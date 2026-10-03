@@ -9,6 +9,7 @@ import {
 } from '../types/decision';
 import { normalizeToFiveScale } from '../utils/scoring';
 import { UIStrings, Language } from '../i18n/translations';
+import { apiUrl } from '../utils/api';
 
 interface SensitivityVerdictViewProps {
   decision: DecisionModel;
@@ -73,7 +74,7 @@ export const SensitivityVerdictView: React.FC<SensitivityVerdictViewProps> = ({
     setChallengeLoading(true);
     setChallengeError(null);
     try {
-      const response = await fetch('/api/decision/challenge', {
+      const response = await fetch(apiUrl('/api/decision/challenge'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

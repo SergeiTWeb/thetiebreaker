@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { DecisionModel } from '../types/decision';
+import { apiUrl } from '../utils/api';
 import { UIStrings, Language } from '../i18n/translations';
 
 interface NewDecisionModalProps {
@@ -225,7 +226,7 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/decision/analyze', {
+      const response = await fetch(apiUrl('/api/decision/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

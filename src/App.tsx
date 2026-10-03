@@ -34,6 +34,7 @@ import { ScenarioExplorerView } from './components/ScenarioExplorerView';
 import { SwotAnalysisView } from './components/SwotAnalysisView';
 import { SensitivityVerdictView } from './components/SensitivityVerdictView';
 import { NewDecisionModal } from './components/NewDecisionModal';
+import { apiUrl } from './utils/api';
 
 const STORAGE_KEY = 'the_tiebreaker_decisions_v3';
 const THEME_STORAGE_KEY = 'the_tiebreaker_theme';
@@ -229,7 +230,7 @@ export default function App() {
           const cached = readCachedTranslation(decision, language, newLang);
           if (cached) return [decision.id, cached] as const;
 
-          const response = await fetch('/api/decision/translate', {
+          const response = await fetch(apiUrl('/api/decision/translate'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ decision, language: newLang }),
@@ -475,7 +476,7 @@ export default function App() {
     setQuickError(null);
 
     try {
-      const response = await fetch('/api/decision/analyze', {
+      const response = await fetch(apiUrl('/api/decision/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dilemma: quickPrompt.trim(), language }),
