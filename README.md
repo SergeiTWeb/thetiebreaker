@@ -18,4 +18,4 @@ The credential is used by the server only. Do not put it in frontend code or com
 - `npm run lint`
 - `npm run build`
 
-Developed by Sergei Tumanov in Turku, Finland. © 2026 Sergei Tumanov. All rights reserved.
+Developed by Sergei Tumanov | web.sergeitumanov.com | 2026
