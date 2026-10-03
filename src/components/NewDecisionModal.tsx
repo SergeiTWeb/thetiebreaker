@@ -249,6 +249,7 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
         title: data.title || dilemma.trim(),
         category: data.category || getLocalizedDecisionCategory(),
         summary: data.summary || dilemma.trim(),
+        analysisNotice: typeof data.analysisNotice === 'string' ? data.analysisNotice : undefined,
         options:
           Array.isArray(data.options) && data.options.length >= 2
             ? data.options

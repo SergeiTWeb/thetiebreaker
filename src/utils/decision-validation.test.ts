@@ -9,6 +9,7 @@ test('sanitizeDecisionModel repairs malformed model payloads into a valid decisi
       title: 'Sample',
       category: 'Work',
       summary: 'Overview',
+      analysisNotice: 'Generic scores are shown.',
       options: [
         { id: 'opt-1', name: 'A', tagline: 'T1', description: 'D1' },
         { id: 'opt-2', name: 'B', tagline: 'T2', description: 'D2' },
@@ -64,4 +65,5 @@ test('sanitizeDecisionModel repairs malformed model payloads into a valid decisi
   assert.equal(result.criteria[0].scores[1].score, 1);
   assert.equal(result.swot[0].quadrant, 'strength');
   assert.deepEqual(result.blindSpots, ['Question 1']);
+  assert.equal(result.analysisNotice, 'Generic scores are shown.');
 });

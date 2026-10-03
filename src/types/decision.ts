@@ -64,6 +64,7 @@ export interface DecisionModel {
   category: string;
   createdAt: string;
   summary: string;
+  analysisNotice?: string;
   options: DecisionOption[];
   prosCons: ProConItem[];
   criteria: ComparisonCriterion[];

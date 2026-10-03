@@ -33,11 +33,23 @@ function getClient(): GoogleGenAI | null {
   return apiKey && apiKey !== 'MY_GEMINI_API_KEY' ? new GoogleGenAI({ apiKey }) : null;
 }
 
-async function generateJson<T>(prompt: string, language: Language, fallback: T): Promise<T> {
-  const client = getClient();
-  if (!client) return fallback;
+type GenerationFailure = 'missing-credential' | 'quota' | 'provider';
 
-  const systemInstruction = `Return valid JSON only. Write all user-facing text in ${languages[language]}. Preserve JSON keys, IDs, enum values, and numeric values exactly.`;
+interface GenerationResult<T> {
+  data: T;
+  generated: boolean;
+  failure?: GenerationFailure;
+}
+
+async function generateJson<T>(
+  prompt: string,
+  language: Language,
+  fallback: T
+): Promise<GenerationResult<T>> {
+  const client = getClient();
+  if (!client) return { data: fallback, generated: false, failure: 'missing-credential' };
+
+  const systemInstruction = `Return valid JSON only. Write all user-facing text in ${languages[language]}. Preserve JSON keys, IDs, enum values, and numeric values exactly. Follow every requested field and minimum item count.`;
   for (const model of ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite']) {
     try {
       const result = await client.models.generateContent({
@@ -46,12 +58,99 @@ async function generateJson<T>(prompt: string, language: Language, fallback: T):
         config: { systemInstruction, responseMimeType: 'application/json' },
       });
       const text = result.text?.trim();
-      if (text) return JSON.parse(text) as T;
+      if (text) return { data: JSON.parse(text) as T, generated: true };
     } catch (error) {
       console.error(`Generation with ${model} failed:`, error);
+      const status = error && typeof error === 'object' && 'status' in error
+        ? Number(error.status)
+        : undefined;
+      if (status === 429) return { data: fallback, generated: false, failure: 'quota' };
+      if (status !== 404) return { data: fallback, generated: false, failure: 'provider' };
     }
   }
-  return fallback;
+  return { data: fallback, generated: false, failure: 'provider' };
+}
+
+function hasCompleteAnalysis(value: unknown, optionCount: number): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const analysis = value as Record<string, unknown>;
+  const options = Array.isArray(analysis.options) ? analysis.options : [];
+  const prosCons = Array.isArray(analysis.prosCons) ? analysis.prosCons : [];
+  const criteria = Array.isArray(analysis.criteria) ? analysis.criteria : [];
+  const swot = Array.isArray(analysis.swot) ? analysis.swot : [];
+  const scenarios = Array.isArray(analysis.scenarios) ? analysis.scenarios : [];
+  const blindSpots = Array.isArray(analysis.blindSpots) ? analysis.blindSpots : [];
+
+  if (options.length !== optionCount || criteria.length < 4 || swot.length < optionCount * 2 || scenarios.length < optionCount || blindSpots.length < 3) {
+    return false;
+  }
+
+  const optionIds = new Set<string>();
+  const optionsAreComplete = options.every((option) => {
+    if (!option || typeof option !== 'object' || !('id' in option)) return false;
+    const optionId = String(option.id);
+    optionIds.add(optionId);
+    const factors = prosCons.filter((factor) =>
+      !!factor && typeof factor === 'object' && 'optionId' in factor && factor.optionId === optionId
+    );
+    return factors.filter((factor) => 'type' in factor && factor.type === 'pro').length >= 2 &&
+      factors.filter((factor) => 'type' in factor && factor.type === 'con').length >= 2;
+  });
+  if (!optionsAreComplete) return false;
+
+  const criteriaAreComplete = criteria.every((criterion) => {
+    if (!criterion || typeof criterion !== 'object' || !('scores' in criterion) || !Array.isArray(criterion.scores)) return false;
+    const scores: unknown[] = criterion.scores;
+    const ratedOptions = new Set(
+      scores.filter((score) =>
+        !!score && typeof score === 'object' && 'optionId' in score && optionIds.has(String(score.optionId)) &&
+        'rationale' in score && typeof score.rationale === 'string' && score.rationale.trim().length > 12
+      ).map((score) => String((score as Record<string, unknown>).optionId))
+    );
+    return optionIds.size === ratedOptions.size;
+  });
+  const allOptionsHaveSwot = [...optionIds].every((optionId) =>
+    swot.filter((item) => !!item && typeof item === 'object' && 'optionId' in item && item.optionId === optionId).length >= 2
+  );
+  const allOptionsHaveScenarios = [...optionIds].every((optionId) => {
+    const scenario = scenarios.find((item) =>
+      !!item && typeof item === 'object' && 'optionId' in item && item.optionId === optionId
+    );
+    if (!scenario || typeof scenario !== 'object') return false;
+    const cases = ['bestCase', 'mostLikelyCase', 'worstCase'] as const;
+    const probabilities = cases.map((caseName) => {
+      const detail = scenario[caseName];
+      if (!detail || typeof detail !== 'object') return Number.NaN;
+      if (!('headline' in detail) || typeof detail.headline !== 'string' || !detail.headline.trim()) return Number.NaN;
+      if (!('narrative' in detail) || typeof detail.narrative !== 'string' || !detail.narrative.trim()) return Number.NaN;
+      if (!('probabilityPercent' in detail)) return Number.NaN;
+      const probability = Number(detail.probabilityPercent);
+      return Number.isFinite(probability) && probability >= 0 && probability <= 100 ? probability : Number.NaN;
+    });
+    return probabilities.every(Number.isFinite) && Math.abs(probabilities.reduce((sum, probability) => sum + probability, 0) - 100) <= 2;
+  });
+
+  return criteriaAreComplete && allOptionsHaveSwot && allOptionsHaveScenarios;
+}
+
+function getAnalysisNotice(language: Language, failure?: GenerationFailure, incomplete = false): string | undefined {
+  if (!failure && !incomplete) return undefined;
+  if (language === 'ru') {
+    if (failure === 'quota') return 'Сервис анализа достиг лимита запросов. Показаны общие шаблонные значения; не воспринимайте текущий рейтинг как персональную рекомендацию.';
+    if (failure === 'missing-credential') return 'Сервис анализа не настроен. Показаны общие шаблонные значения; добавьте факторы и оценки перед использованием результата.';
+    if (failure) return 'Сервис анализа временно недоступен. Показаны общие шаблонные значения; проверьте факторы и оценки.';
+    return 'Ответ анализа неполный; недостающие разделы заполнены шаблонными значениями. Проверьте их перед использованием рейтинга.';
+  }
+  if (language === 'fi') {
+    if (failure === 'quota') return 'Analyysipalvelun pyyntökiintiö on täynnä. Näytetään yleisiä malliarvoja; älä pidä pisteytystä henkilökohtaisena suosituksena.';
+    if (failure === 'missing-credential') return 'Analyysipalvelua ei ole määritetty. Näytetään yleisiä malliarvoja; lisää tekijät ja arviot ennen tuloksen käyttöä.';
+    if (failure) return 'Analyysipalvelu ei ole tilapäisesti käytettävissä. Näytetään yleisiä malliarvoja; tarkista tekijät ja arviot.';
+    return 'Analyysivastaus oli puutteellinen; puuttuvat osat täytettiin malliarvoilla. Tarkista ne ennen pisteytykseen luottamista.';
+  }
+  if (failure === 'quota') return 'The analysis service has reached its request quota. Generic template values are shown; do not treat this score as a personalized recommendation.';
+  if (failure === 'missing-credential') return 'The analysis service is not configured. Generic template values are shown; add factors and ratings before relying on the result.';
+  if (failure) return 'The analysis service is temporarily unavailable. Generic template values are shown; review the factors and scores.';
+  return 'The analysis response was incomplete; missing sections use template values. Review them before relying on the score.';
 }
 
 function makeFallbackDecision(
@@ -172,19 +271,27 @@ app.post('/api/decision/analyze', async (req, res) => {
   const language = parseLanguage(req.body?.language);
   const dilemma = typeof req.body?.dilemma === 'string' ? req.body.dilemma.trim() : '';
   if (!dilemma) return res.status(400).json({ error: 'A decision question is required.' });
+  const requestedOptions = Array.isArray(req.body?.optionsInput)
+    ? req.body.optionsInput
+    : Array.isArray(req.body?.options)
+      ? req.body.options
+      : undefined;
   const fallback = makeFallbackDecision(
     dilemma,
-    req.body?.options,
+    requestedOptions,
     language,
     req.body?.context,
     req.body?.userProsCons
   );
   const result = await generateJson<unknown>(
-    `Create a balanced decision analysis for this question: ${dilemma}\nContext: ${req.body?.context || 'None provided'}\nOptions: ${JSON.stringify(req.body?.options || fallback.options.map((option) => option.name))}\nUser factors: ${JSON.stringify(req.body?.userProsCons || [])}\nReturn JSON with title, category, summary, options, prosCons, criteria, swot, scenarios, and blindSpots. Keep IDs and enum values valid.`,
+    `Analyze the user's decision rather than filling a generic template.\nDecision: ${dilemma}\nContext and constraints: ${typeof req.body?.context === 'string' && req.body.context.trim() ? req.body.context.trim() : 'Not provided; state important assumptions.'}\nExact options and required IDs: ${JSON.stringify(fallback.options.map(({ id, name }) => ({ id, name })))}\nUser-specified factors and importance weights: ${JSON.stringify(req.body?.userProsCons || [])}\n\nReturn a complete JSON decision model with these fields: title, category, summary, options, prosCons, criteria, swot, scenarios, blindSpots. Keep the supplied options' meaning and order. For EACH option include a distinct, decision-specific tagline and description, at least two concrete pros and two concrete cons with impact notes and 1-5 weights, at least four weighted comparison criteria with a score and specific rationale for every option, at least two SWOT items, and best/most-likely/worst scenarios with probabilities totaling 100. Include at least three decision-specific blind spots. Do not reuse generic factors across options. Avoid assigning equal scores merely for symmetry: distinguish options where evidence supports it, but do not invent the user's personal preferences or facts. State uncertainty and scoring assumptions in the summary; only call it a tie when the evidence and supplied weights genuinely support a tie.\n\nFor decisions involving alcohol or another health risk, do not describe either option as safe; distinguish beverage choice from amount consumed, avoid inventing serving sizes or personal preferences, and mention abstaining as the lower-risk baseline when relevant.\n\nUse these option IDs consistently in every section: ${fallback.options.map((option) => option.id).join(', ')}. Enum values must be pros/cons = pro or con and SWOT quadrant = strength, weakness, opportunity, or threat. Return JSON only.`,
     language,
     fallback
   );
-  res.json(sanitizeDecisionModel(result, fallback));
+  const complete = result.generated && hasCompleteAnalysis(result.data, fallback.options.length);
+  const model = complete ? sanitizeDecisionModel(result.data, fallback) : fallback;
+  const analysisNotice = getAnalysisNotice(language, result.failure, !result.failure && !complete);
+  res.json({ ...model, analysisNotice });
 });
 
 app.post('/api/decision/translate', async (req, res) => {
@@ -192,13 +299,13 @@ app.post('/api/decision/translate', async (req, res) => {
   const decision = req.body?.decision;
   if (!decision || typeof decision !== 'object') return res.status(400).json({ error: 'A decision model is required.' });
   if (!getClient()) return res.status(503).json({ error: 'Translation is unavailable. Configure the server credential to translate saved decisions.' });
-  const translated = await generateJson<unknown>(
+  const translation = await generateJson<unknown>(
     `Translate all user-facing text in this decision model into ${languages[language]}. Preserve every JSON key, ID, enum value, number, probability, and array order. Do not summarize, omit, or alter user-entered meaning. Return the same JSON structure.\n${JSON.stringify(decision)}`,
     language,
     null
   );
-  if (!translated) return res.status(502).json({ error: 'The decision could not be translated.' });
-  res.json(mergeTranslatedStrings(decision, translated));
+  if (!translation.generated || !translation.data) return res.status(502).json({ error: 'The decision could not be translated.' });
+  res.json(mergeTranslatedStrings(decision, translation.data));
 });
 
 app.post('/api/decision/scenarios', async (req, res) => {
@@ -217,7 +324,7 @@ app.post('/api/decision/scenarios', async (req, res) => {
     language,
     fallback
   );
-  res.json(result);
+  res.json(result.data);
 });
 
 app.post('/api/decision/challenge', async (req, res) => {
@@ -233,7 +340,7 @@ app.post('/api/decision/challenge', async (req, res) => {
     language,
     fallback
   );
-  res.json(result);
+  res.json(result.data);
 });
 
 async function startServer() {

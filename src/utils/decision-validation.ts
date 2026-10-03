@@ -184,6 +184,7 @@ export function sanitizeDecisionModel(value: unknown, fallback: DecisionModel): 
     category: toStringValue(value.category, fallback.category),
     createdAt: toStringValue(value.createdAt, fallback.createdAt),
     summary: toStringValue(value.summary, fallback.summary),
+    analysisNotice: typeof value.analysisNotice === 'string' ? value.analysisNotice : undefined,
     options: normalizedOptions,
     prosCons: normalizedProsCons,
     criteria: normalizedCriteria,

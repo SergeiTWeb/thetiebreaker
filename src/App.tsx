@@ -218,18 +218,43 @@ export default function App() {
   const [isTranslatingDecisions, setIsTranslatingDecisions] = useState(false);
   const [languageChangeError, setLanguageChangeError] = useState<string | null>(null);
 
-  const handleSelectLanguage = async (newLang: Language) => {
+  const handleSelectLanguage = (newLang: Language) => {
     if (newLang === language || isTranslatingDecisions) return;
     setLanguageChangeError(null);
+    const sourceLanguage = language;
+    setLanguage(newLang);
+    const localizedSamples = getLocalizedSampleDecisions(newLang);
+    const sampleMap = new Map(localizedSamples.map((decision) => [decision.id, decision]));
+    const customDecisions = decisions.filter((decision) => !SAMPLE_IDS.has(decision.id));
+    const cachedTranslations = new Map<string, DecisionModel>();
+    const pendingDecisions: DecisionModel[] = [];
+
+    for (const decision of customDecisions) {
+      const cached = readCachedTranslation(decision, sourceLanguage, newLang);
+      if (cached) cachedTranslations.set(decision.id, cached);
+      else pendingDecisions.push(decision);
+    }
+
+    setDecisions((current) =>
+      current.map((decision) => {
+        if (SAMPLE_IDS.has(decision.id)) return sampleMap.get(decision.id) || decision;
+        const cached = cachedTranslations.get(decision.id);
+        return cached ? mergeTranslatedText(decision, cached) : decision;
+      })
+    );
+
+    if (pendingDecisions.length === 0) return;
     setIsTranslatingDecisions(true);
 
-    try {
-      const customDecisions = decisions.filter((decision) => !SAMPLE_IDS.has(decision.id));
-      const translatedEntries = await Promise.all(
-        customDecisions.map(async (decision) => {
-          const cached = readCachedTranslation(decision, language, newLang);
-          if (cached) return [decision.id, cached] as const;
+    const prioritizedDecisions = pendingDecisions.sort(
+      (left, right) => Number(right.id === activeDecisionId) - Number(left.id === activeDecisionId)
+    );
 
+    void (async () => {
+      let translationFailed = false;
+
+      for (const decision of prioritizedDecisions) {
+        try {
           const response = await fetch(apiUrl('/api/decision/translate'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -237,33 +262,30 @@ export default function App() {
           });
           const translated = await response.json();
           if (!response.ok) throw new Error(translated.error || 'Translation failed.');
-          cacheTranslation(decision, language, newLang, translated);
-          return [decision.id, translated] as const;
-        })
-      );
-      const translatedMap = new Map(translatedEntries);
-      const localizedSamples = getLocalizedSampleDecisions(newLang);
-      const sampleMap = new Map(localizedSamples.map((decision) => [decision.id, decision]));
 
-      setDecisions((current) =>
-        current.map((decision) => {
-          if (SAMPLE_IDS.has(decision.id)) return sampleMap.get(decision.id) || decision;
-          const translated = translatedMap.get(decision.id);
-          return translated ? mergeTranslatedText(decision, translated) : decision;
-        })
-      );
-      setLanguage(newLang);
-    } catch {
-      setLanguageChangeError(
-        language === 'ru'
-          ? 'Не удалось перевести сохранённые решения. Проверьте подключение и настройки сервиса.'
-          : language === 'fi'
-            ? 'Tallennettujen päätösten kääntäminen epäonnistui. Tarkista yhteys ja palvelun asetukset.'
-            : 'Saved decisions could not be translated. Check the connection and service configuration.'
-      );
-    } finally {
+          cacheTranslation(decision, sourceLanguage, newLang, translated);
+          setDecisions((current) =>
+            current.map((item) => {
+              if (item.id !== decision.id || !matchesTranslationSnapshot(item, decision)) return item;
+              return mergeTranslatedText(item, translated);
+            })
+          );
+        } catch {
+          translationFailed = true;
+        }
+      }
+
+      if (translationFailed) {
+        setLanguageChangeError(
+          newLang === 'ru'
+            ? 'Некоторые сохранённые решения пока остались на прежнем языке.'
+            : newLang === 'fi'
+              ? 'Osa tallennetuista päätöksistä jäi vielä aiemmalle kielelle.'
+              : 'Some saved decisions could not be translated yet.'
+        );
+      }
       setIsTranslatingDecisions(false);
-    }
+    })();
   };
 
   const [activeDecisionId, setActiveDecisionId] = useState<string>(
@@ -492,6 +514,7 @@ export default function App() {
         title: data.title || quickPrompt.trim(),
         category: data.category || getLocalizedDecisionCategory(),
         summary: data.summary || quickPrompt.trim(),
+        analysisNotice: typeof data.analysisNotice === 'string' ? data.analysisNotice : undefined,
         options:
           Array.isArray(data.options) && data.options.length >= 2
             ? data.options
@@ -630,14 +653,14 @@ export default function App() {
 
       <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30">
 
-        <div className="flex items-center gap-2.5">
+        <a href="/" aria-label="The Tiebreaker home" className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center">
             <Scale className="w-4 h-4" />
           </div>
           <span className="font-display font-semibold text-base tracking-tight text-slate-900 dark:text-slate-100">
             The Tiebreaker
           </span>
-        </div>
+        </a>
 
         <nav className="hidden xl:flex items-center gap-1">
           {[
@@ -1005,6 +1028,11 @@ export default function App() {
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 max-w-4xl leading-relaxed">
                   {activeDecision.summary}
                 </p>
+                {activeDecision.analysisNotice && (
+                  <p role="status" className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                    {activeDecision.analysisNotice}
+                  </p>
+                )}
 
                 {leader && runnerUp && (
                   <section
@@ -1316,10 +1344,6 @@ export default function App() {
 
       <footer className="border-t border-slate-200 dark:border-slate-800 px-4 py-4 text-center text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-center gap-x-2">
         <span>© 2026 Sergei Tumanov</span>
-        <span aria-hidden="true">|</span>
-        <a href="https://web.sergeitumanov.com" className="underline underline-offset-2 hover:text-slate-800 dark:hover:text-slate-200">
-          web.sergeitumanov.com
-        </a>
         <span aria-hidden="true">|</span>
         <a href="https://web.sergeitumanov.com" className="underline underline-offset-2 hover:text-slate-800 dark:hover:text-slate-200">
           web.sergeitumanov.com
