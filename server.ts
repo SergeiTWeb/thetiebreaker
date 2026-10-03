@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,15 @@ const port = Number(process.env.PORT) || 3000;
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const languages = { en: 'English', ru: 'Russian', fi: 'Finnish' } as const;
 type Language = keyof typeof languages;
+
+app.use(cors({
+  origin: [
+    'https://thetiebreaker.sergeitumanov.com',
+    'http://localhost:3000',
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 function parseLanguage(value: unknown): Language {
   return value === 'ru' || value === 'fi' ? value : 'en';
