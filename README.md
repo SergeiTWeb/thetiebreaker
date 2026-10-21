@@ -17,11 +17,12 @@ Instead of relying on gut feeling, TieBreaker applies five distinct analytical f
 ## Key Features
 
 - **5 Analytical Lenses**: 
-  1. **Weighted Pros & Cons**: Net ledger balances with 1–5 importance scaling.
-  2. **Decision Matrix**: Side-by-side criterion scoring multiplied by weight.
-  3. **Scenario Explorer**: Best-case, most likely, and worst-case narrative projections with probability weighting.
-  4. **Strategic SWOT**: 2×2 grid mapping internal/external forces with actionable mitigation strategies.
-  5. **Sensitivity & Devil’s Advocate**: Interactive methodology mixer to stress-test the mathematical verdict and identify reversal thresholds.
+1. **Weighted Pros & Cons**: Net ledger balances with 1–5 importance scaling.
+2. **Decision Matrix**: Side-by-side criterion scoring multiplied by weight.
+3. **Scenario Explorer**: Best-case, most likely, and worst-case narrative projections with probability weighting.
+4. **Strategic SWOT**: 2×2 grid mapping internal/external forces with actionable mitigation strategies.
+5. **Sensitivity & Devil’s Advocate**: Interactive methodology mixer to stress-test the mathematical verdict and identify reversal thresholds.
+
 - **Real-Time Composite Scoring**: A unified 0–100 scoring engine that instantly recalculates as weights are adjusted.
 - **Modern, Accessible UI**: Clean, minimalist interface with persistent Light/Dark mode support and responsive Tailwind CSS v4 styling.
 - **Local-First Persistence**: All decision dossiers are securely saved to `localStorage`, ensuring zero data loss between sessions.
@@ -102,7 +103,8 @@ Open .env and add your key:
 ```bash
   npm run dev
 ```
-The app will be available at http://localhost:3000. Vite HMR will automatically reflect any code changes.
+The app will be available at http://localhost:3000. 
+Vite HMR will automatically reflect any code changes.
 
 ## Deployment
 This project is designed for easy deployment on Node.js-compatible platforms like Render or Railway.
@@ -114,11 +116,8 @@ This project is designed for easy deployment on Node.js-compatible platforms lik
 - Deploy! The platform will compile the Vite frontend into the dist/ folder, and the Express server will automatically serve it.
 
 ## 🤝 Contributing & Open Source
-TieBreaker is open source. Feel free to fork the repository, submit issues, or open pull requests if you have ideas for new analytical frameworks or UI improvements.
+TieBreaker is open source. 
+Feel free to fork the repository, submit issues, or open pull requests if you have ideas for new analytical frameworks or UI improvements.
 
 ## Author
-Sergei Tumanov
-🌐 web.sergeitumanov.com
-💼 LinkedIn Profile [(https://github.com/SergeiTWeb)]
-
-Built with precision, modern tooling, and a focus on solving real-world decision fatigue.
+Sergei Tumanov | [website](https://web.sergeitumanov.com) | [github](https://github.com/SergeiTWeb)
