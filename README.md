@@ -120,4 +120,5 @@ TieBreaker is open source.
 Feel free to fork the repository, submit issues, or open pull requests if you have ideas for new analytical frameworks or UI improvements.
 
 ## Author
-Sergei Tumanov | [website](https://web.sergeitumanov.com) | [github](https://github.com/SergeiTWeb)
+Sergei Tumanov
+[PORTFOLIO/WEBSITE](https://web.sergeitumanov.com) | [GITHUB PROJECTS](https://github.com/SergeiTWeb)
