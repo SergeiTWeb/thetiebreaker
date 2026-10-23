@@ -14,7 +14,7 @@ import {
 } from '../types/decision';
 import { normalizeToFiveScale } from '../utils/scoring';
 import { UIStrings, Language } from '../i18n/translations';
-import { apiUrl } from '../utils/api';
+import { apiPost } from '../utils/api';
 
 interface ScenarioExplorerViewProps {
   decision: DecisionModel;
@@ -37,10 +37,9 @@ export const ScenarioExplorerView: React.FC<ScenarioExplorerViewProps> = ({
   const handleRegenerateScenarios = async () => {
     setRegenerating(true);
     try {
-      const response = await fetch(apiUrl('/api/decision/scenarios'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await apiPost<{ scenarios?: OptionScenarioProjection[] }>(
+        '/api/decision/scenarios',
+        {
           title: decision.title,
           summary: decision.summary,
           options: decision.options,
@@ -49,9 +48,8 @@ export const ScenarioExplorerView: React.FC<ScenarioExplorerViewProps> = ({
             weight: normalizeToFiveScale(p.weight),
           })),
           language,
-        }),
-      });
-      const data = await response.json();
+        }
+      );
       if (data && Array.isArray(data.scenarios)) {
         onUpdateScenarios(data.scenarios);
       }

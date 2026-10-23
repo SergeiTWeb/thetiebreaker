@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { DecisionModel } from '../types/decision';
-import { apiUrl } from '../utils/api';
+import { apiPost } from '../utils/api';
 import { UIStrings, Language } from '../i18n/translations';
 
 interface NewDecisionModalProps {
@@ -226,22 +226,16 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch(apiUrl('/api/decision/analyze'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await apiPost<Partial<DecisionModel> & { error?: string }>(
+        '/api/decision/analyze',
+        {
           dilemma,
           context,
           optionsInput: optionsInput.filter((o) => o.trim().length > 0),
           userProsCons,
           language,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate decision analysis.');
-      }
+        }
+      );
 
       const newModel: DecisionModel = {
         id: `dec-${Date.now()}`,

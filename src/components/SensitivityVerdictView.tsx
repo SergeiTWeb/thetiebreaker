@@ -9,7 +9,7 @@ import {
 } from '../types/decision';
 import { normalizeToFiveScale } from '../utils/scoring';
 import { UIStrings, Language } from '../i18n/translations';
-import { apiUrl } from '../utils/api';
+import { apiPost } from '../utils/api';
 
 interface SensitivityVerdictViewProps {
   decision: DecisionModel;
@@ -74,25 +74,16 @@ export const SensitivityVerdictView: React.FC<SensitivityVerdictViewProps> = ({
     setChallengeLoading(true);
     setChallengeError(null);
     try {
-      const response = await fetch(apiUrl('/api/decision/challenge'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: decision.title,
-          summary: decision.summary,
-          options: decision.options.map((o) => ({ id: o.id, name: o.name })),
-          leadingOptionName: leader?.option.name || 'Option 1',
-          runnerUpOptionName: runnerUp?.option.name || 'Option 2',
-          scoreMargin: margin,
-          topWeightedFactors: topDrivers,
-          language,
-        }),
+      const data = await apiPost<DevilsAdvocateResponse>('/api/decision/challenge', {
+        title: decision.title,
+        summary: decision.summary,
+        options: decision.options.map((o) => ({ id: o.id, name: o.name })),
+        leadingOptionName: leader?.option.name || 'Option 1',
+        runnerUpOptionName: runnerUp?.option.name || 'Option 2',
+        scoreMargin: margin,
+        topWeightedFactors: topDrivers,
+        language,
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to run Devil’s Advocate stress-test.');
-      }
       setChallengeResult(data);
     } catch (err: unknown) {
       setChallengeError(
