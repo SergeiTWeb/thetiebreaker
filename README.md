@@ -35,7 +35,7 @@ Instead of relying on gut feeling, TieBreaker applies five distinct analytical f
 | Category | Technologies |
 | :--- | :--- |
 | **Frontend** | React 19, TypeScript, Tailwind CSS v4, Lucide React |
-| **Backend** | Express.js, `tsx` (TypeScript execution), Vite Middleware |
+| **Backend** | Vercel Serverless Functions (`api/`), Express (local dev), `tsx` (TypeScript execution) |
 | **AI Integration** | `@google/genai` (Gemini Flash models with strict JSON schema parsing) |
 | **Tooling** | Vite, ESLint, TypeScript, Git |
 
@@ -51,7 +51,12 @@ TieBreaker uses a **unified full-stack architecture**. The Express server (`serv
 
 ```text
 thetiebreaker/
+├── api/                    # Vercel serverless functions
+│   ├── _lib/               # Shared HTTP/CORS helpers (not routed)
+│   ├── decision/           # analyze | translate | scenarios | challenge
+│   └── health.ts
 ├── public/                 # Static assets (e.g., favicon.svg)
+├── server/                 # Framework-agnostic AI decision logic (shared by api/ and Express)
 ├── src/
 │   ├── components/         # Modular React UI components (Views, Modals)
 │   ├── data/               # Static data and sample templates
@@ -63,8 +68,9 @@ thetiebreaker/
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Secure ignore rules
 ├── package.json            # Dependencies and scripts
-├── server.ts               # Express backend + Vite dev middleware
+├── server.ts               # Local Express dev server (Vite middleware)
 ├── tsconfig.json           # TypeScript configuration
+├── vercel.json             # Vercel build + function configuration
 └── vite.config.ts          # Vite bundler configuration
 ```
 
@@ -106,14 +112,22 @@ Open .env and add your key:
 The app will be available at http://localhost:3000. 
 Vite HMR will automatically reflect any code changes.
 
-## Deployment
-This project is designed for easy deployment on Node.js-compatible platforms like Render or Railway.
+## Deployment (Vercel)
 
-- Connect your GitHub repository to the platform.
-- Set the Build Command: npm install && npm run build
-- Set the Start Command: npm start (This runs tsx server.ts)
-- Add your GEMINI_API_KEY to the platform's Environment Variables dashboard.
-- Deploy! The platform will compile the Vite frontend into the dist/ folder, and the Express server will automatically serve it.
+The frontend and the API deploy together as **one Vercel project**:
+`npm run build` produces the static site in `dist/`, and every file under `api/`
+becomes a serverless function (`/api/decision/analyze`, `/api/decision/translate`,
+`/api/decision/scenarios`, `/api/decision/challenge`, `/api/health`).
+
+1. Import the repository into Vercel (Framework preset: **Vite**, Build Command: `npm run build`, Output Directory: `dist` — `vercel.json` already sets these).
+2. Add the environment variable **`DECISION_SERVICE_KEY`** (or `GEMINI_API_KEY`) in Project Settings → Environment Variables, for Production + Preview.
+3. **Do not** set `VITE_API_BASE_URL` when the API is on the same domain — the app calls `/api/...` relative to its own origin, which means no CORS preflight at all.
+4. Deploy. Verify with `curl https://your-domain/api/health` → `{"ok":true,...}`.
+
+Notes:
+- Functions are capped at 60s (`maxDuration` in `vercel.json`); the Gemini calls have a 40s per-model timeout and race up to three models in parallel to stay within that budget.
+- `CLIENT_ORIGINS` (comma separated) is only needed if you ever host the API on a different domain.
+- Local development is unchanged: `npm run dev` starts Express with Vite middleware and the same `/api/*` routes.
 
 ## 🤝 Contributing & Open Source
 TieBreaker is open source. 

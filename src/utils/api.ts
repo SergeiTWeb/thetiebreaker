@@ -1,14 +1,13 @@
-const configuredApiBaseUrl = (
-  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL
-)?.trim();
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
-// UPDATE THIS: Replace with your actual Vercel backend URL.
-// If your frontend and backend are in the SAME Vercel project, this custom domain works perfectly.
-// If they are in separate Vercel projects, replace this with your backend's .vercel.app URL.
-const productionApiBaseUrl = 'https://thetiebreaker.sergeitumanov.com';
-
-const apiBaseUrl = (configuredApiBaseUrl || (import.meta.env.PROD ? productionApiBaseUrl : ''))
-  .replace(/\/+$/, '');
+/**
+ * Empty by default so the app calls its own origin (/api/...).
+ * That is what we want now that the API is deployed on Vercel next to the
+ * frontend: same-origin requests never trigger a CORS preflight.
+ *
+ * Only set VITE_API_BASE_URL (build-time) when the API lives on another domain.
+ */
+const apiBaseUrl = (configuredApiBaseUrl || '').replace(/\/+$/, '');
 
 export function apiUrl(path: string): string {
   return `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
@@ -31,7 +30,7 @@ export class ApiError extends Error {
 const unreachableMessage =
   'Cannot reach the analysis service. It may be waking up or temporarily unavailable — wait about 30 seconds and try again.';
 const unavailableMessage =
-  'The analysis service is currently unavailable (the server is suspended or starting up). Please try again in a minute.';
+  'The analysis service is currently unavailable. Please try again in a minute.';
 const badResponseMessage =
   'The analysis service returned an unexpected response. Please try again.';
 
@@ -63,8 +62,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch {
-    // fetch only rejects for network/CORS/proxy failures. A suspended or
-    // crashed host answers without CORS headers, which lands here too.
+    // fetch only rejects for network/CORS/proxy failures.
     throw new ApiError(unreachableMessage, 'network');
   }
 
