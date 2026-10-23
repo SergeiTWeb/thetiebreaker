@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
-import type { DecisionModel, OptionScenarioProjection } from '../src/types/decision.js';
-import { sanitizeDecisionModel } from '../src/utils/decision-validation.js';
+import type { DecisionModel, OptionScenarioProjection } from '../src/types/decision';
+import { sanitizeDecisionModel } from '../src/utils/decision-validation';
 
 export interface ServiceResult {
   status: number;

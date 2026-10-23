@@ -1,16 +1,14 @@
-const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-
 /**
- * Empty by default so the app calls its own origin (/api/...).
- * That is what we want now that the API is deployed on Vercel next to the
- * frontend: same-origin requests never trigger a CORS preflight.
+ * The API is deployed alongside the frontend on Vercel, so all requests are
+ * same-origin: no base URL, no CORS preflight, no build-time env var to forget.
  *
- * Only set VITE_API_BASE_URL (build-time) when the API lives on another domain.
+ * If you ever move the API to a different domain, set API_BASE_URL to that
+ * absolute origin (and add it to CLIENT_ORIGINS on the server).
  */
-const apiBaseUrl = (configuredApiBaseUrl || '').replace(/\/+$/, '');
+const API_BASE_URL = '';
 
 export function apiUrl(path: string): string {
-  return `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 export type ApiErrorKind = 'network' | 'unavailable' | 'request' | 'response';

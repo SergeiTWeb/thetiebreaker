@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { ServiceResult } from '../../server/decision-service.js';
+import type { ServiceResult } from '../../server/decision-service';
 
 const defaultOrigins = [
   'http://localhost:3000',

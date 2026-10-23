@@ -2,7 +2,6 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
 import {
   analyzeDecision,
@@ -11,11 +10,11 @@ import {
   isAnalysisConfigured,
   translateDecision,
   type ServiceResult,
-} from './server/decision-service.js';
+} from './server/decision-service';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
-const directory = path.dirname(fileURLToPath(import.meta.url));
+const directory = process.cwd();
 
 const configuredOrigins = (process.env.CLIENT_ORIGINS ?? '')
   .split(',')
