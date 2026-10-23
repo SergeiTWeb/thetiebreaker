@@ -16,11 +16,14 @@ type Language = keyof typeof languages;
 
 app.use(cors({
   origin: [
-    'https://thetiebreaker.sergeitumanov.com',
-    'http://localhost:3000',
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://thetiebreaker.sergeitumanov.com",
+    "https://thetiebreaker-open-tips.vercel.app"
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
 
 function parseLanguage(value: unknown): Language {
