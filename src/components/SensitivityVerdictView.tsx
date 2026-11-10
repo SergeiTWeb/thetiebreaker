@@ -48,40 +48,43 @@ export const SensitivityVerdictView: React.FC<SensitivityVerdictViewProps> = ({
   const margin =
     leader && runnerUp ? leader.compositeScore - runnerUp.compositeScore : 0;
 
-  const topDrivers = [
-    ...decision.criteria
-      .filter((c) => normalizeToFiveScale(c.weight) >= 4)
-      .map(
-        (c) => `Matrix Factor: ${c.name} (Weight ${normalizeToFiveScale(c.weight)}/5)`
-      ),
-    ...decision.prosCons
-      .filter((p) => normalizeToFiveScale(p.weight) >= 4)
-      .map(
-        (p) =>
-          `${p.type.toUpperCase()}: ${p.title} (Weight ${normalizeToFiveScale(p.weight)}/5)`
-      ),
-    ...decision.swot
-      .filter((s) => normalizeToFiveScale(s.weight) >= 4)
-      .map(
-        (s) =>
-          `SWOT ${s.quadrant.toUpperCase()}: ${s.title} (Weight ${normalizeToFiveScale(
-            s.weight
-          )}/5)`
-      ),
-  ].slice(0, 6);
-
   const handleRunDevilsAdvocate = async () => {
     setChallengeLoading(true);
     setChallengeError(null);
+    setChallengeResult(null);
+    setAddedItems({});
     try {
       const data = await apiPost<DevilsAdvocateResponse>('/api/decision/challenge', {
         title: decision.title,
-        summary: decision.summary,
+        decision: {
+          summary: decision.summary,
+          options: decision.options,
+          prosCons: [...decision.prosCons]
+            .sort((a, b) => normalizeToFiveScale(b.weight) - normalizeToFiveScale(a.weight))
+            .slice(0, 12),
+          criteria: decision.criteria.map((criterion) => ({
+            name: criterion.name,
+            description: criterion.description,
+            weight: criterion.weight,
+            scores: criterion.scores,
+          })),
+          swot: [...decision.swot]
+            .sort((a, b) => normalizeToFiveScale(b.weight) - normalizeToFiveScale(a.weight))
+            .slice(0, 12),
+          optionScores: scores.map((score) => ({
+            optionId: score.option.id,
+            optionName: score.option.name,
+            compositeScore: score.compositeScore,
+            prosConsScore: score.prosConsScore,
+            matrixScore: score.matrixScore,
+            swotScore: score.swotScore,
+          })),
+        },
         options: decision.options.map((o) => ({ id: o.id, name: o.name })),
         leadingOptionName: leader?.option.name || 'Option 1',
         runnerUpOptionName: runnerUp?.option.name || 'Option 2',
+        runnerUpOptionId: runnerUp?.option.id || decision.options[1]?.id,
         scoreMargin: margin,
-        topWeightedFactors: topDrivers,
         language,
       });
       setChallengeResult(data);

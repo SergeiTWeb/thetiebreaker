@@ -1,4 +1,4 @@
-export type FrameworkTab = 'pros-cons' | 'matrix' | 'scenarios' | 'swot' | 'sensitivity';
+export type FrameworkTab = 'pros-cons' | 'matrix' | 'deep-dive';
 
 export interface DecisionOption {
   id: string;

@@ -43,6 +43,7 @@ export interface UIStrings {
   trailsBy: (pts: string) => string;
   
   allOptions: (count: number) => string;
+  allChoices: (count: number) => string;
   filterProsConsPlaceholder: string;
   hideFactorForm: string;
   addProConBtn: string;
@@ -81,6 +82,8 @@ export interface UIStrings {
   matrixHeading: string;
   matrixSubtitle: string;
   addMatrixFactorBtn: string;
+  addMatrixFactorModalHeading: string;
+  addMatrixFactorModalSub: string;
   factorCriterionNameLabel: string;
   factorCriterionPlaceholder: string;
   descriptionLabel: string;
@@ -95,6 +98,7 @@ export interface UIStrings {
   weightedMatrixTotalScore: string;
   maxPossiblePrefix: string;
   normalizedScoreLabel: string;
+  shareSuffix: string;
 
   scenariosHeading: string;
   scenariosSubtitle: string;
@@ -117,6 +121,8 @@ export interface UIStrings {
   combinedView: (count: number) => string;
   swotReadinessLabel: string;
   addSwotFactorBtn: string;
+  addSwotModalHeading: string;
+  addSwotModalSub: string;
   targetOptionLabel: string;
   swotQuadrantLabel: string;
   factorHeadlineLabel: string;
@@ -234,17 +240,18 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     leadingChoice: 'Leading Choice',
     trailsBy: (pts) => `Trails by ${pts} pts`,
     allOptions: (count) => `All Options (${count})`,
+    allChoices: (count) => `All Choices (${count})`,
     filterProsConsPlaceholder: 'Filter factors...',
     hideFactorForm: 'Hide Form',
     addProConBtn: 'Add Factor',
     listProConHeading: 'Add New Factor',
-    scaleExplanation: 'Scale: 1 = Low, 5 = Critical',
+    scaleExplanation: 'Importance: 1 = Low, 3 = Medium, 5 = Critical.',
     choiceOptionLabel: 'Target Option',
     factorTypeLabel: 'Factor Type',
     proPlusWeight: '+ Pro',
     conMinusWeight: '- Con',
     categoryAspectLabel: 'Category / Domain',
-    categoryAspectPlaceholder: 'e.g., Financial, Technical',
+    categoryAspectPlaceholder: 'e.g., Growth, Team, Creative',
     importanceWeightLabel: 'Importance Weight',
     proOrConStatementLabel: 'Factor Headline',
     proOrConStatementPlaceholder: 'e.g., High initial capital requirement',
@@ -263,10 +270,12 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     proLabel: 'PRO',
     conLabel: 'CON',
     importanceScaleLabel: 'Weight:',
-    weightLevels: { 1: '1 (Low)', 2: '2', 3: '3 (Medium)', 4: '4', 5: '5 (Critical)' },
+    weightLevels: { 1: '1 (Low)', 2: '2 (Low-medium)', 3: '3 (Medium)', 4: '4 (High)', 5: '5 (Critical)' },
     matrixHeading: 'Decision Matrix',
     matrixSubtitle: 'Compare options side-by-side on shared criteria.',
     addMatrixFactorBtn: '+ Add Criterion',
+    addMatrixFactorModalHeading: 'Add a Decision Criterion',
+    addMatrixFactorModalSub: 'Score each option against this factor.',
     factorCriterionNameLabel: 'Criterion Name',
     factorCriterionPlaceholder: 'e.g., Time-to-Market',
     descriptionLabel: 'Description',
@@ -277,10 +286,11 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     saveFactorRowBtn: 'Save Criterion',
     colDecisionFactor: 'Decision Factor',
     colImportanceWeight: 'Weight',
-    priorityLevels: { 1: '1 (Low)', 2: '2', 3: '3 (Medium)', 4: '4', 5: '5 (Critical)' },
+    priorityLevels: { 1: '1 (Low)', 2: '2 (Low-medium)', 3: '3 (Medium)', 4: '4 (High)', 5: '5 (Critical)' },
     weightedMatrixTotalScore: 'Matrix Score',
     maxPossiblePrefix: 'Max:',
     normalizedScoreLabel: 'Normalized',
+    shareSuffix: 'share',
     scenariosHeading: 'Scenario Explorer',
     scenariosSubtitle: 'Project future outcomes based on current weighted factors.',
     updatingScenariosBtn: 'Updating...',
@@ -301,6 +311,8 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     combinedView: (count) => `Combined View (${count})`,
     swotReadinessLabel: 'SWOT Readiness',
     addSwotFactorBtn: '+ Add SWOT Factor',
+    addSwotModalHeading: 'Add a SWOT Factor',
+    addSwotModalSub: 'Capture a strength, weakness, opportunity, or threat.',
     targetOptionLabel: 'Target Option',
     swotQuadrantLabel: 'Quadrant',
     factorHeadlineLabel: 'Factor Headline',
@@ -310,7 +322,7 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     tacticalLeverageLabel: 'Leverage / Mitigation',
     tacticalLeveragePlaceholder: 'Actionable next step...',
     addToSwotMatrixBtn: 'Add to SWOT',
-    noFactorsInQuadrant: 'No factors in this quadrant yet.',
+    noFactorsInQuadrant: 'No factor has been added for this quadrant yet.',
     howToLeverage: 'How to Leverage',
     mitigationPlan: 'Mitigation Plan',
     quadrants: {
@@ -358,15 +370,15 @@ export const TRANSLATIONS: Record<Language, UIStrings> = {
     typeLabel: 'Type',
     factorDescriptionLabel: 'Description',
     factorDescriptionPlaceholder: 'Brief context...',
-    weightShortLabel: 'Wt',
+    weightShortLabel: 'Weight (1-5)',
     step4ContextLabel: 'Context / Summary',
     step4ContextPlaceholder: 'Any additional background information...',
     modalFooterNote: 'You can refine all weights and details after creation.',
-    buildingDecisionModelBtn: 'Building Model...',
+    buildingDecisionModelBtn: 'Generating your decision...',
     generateWeightedModelBtn: 'Generate Weighted Model',
     loadSampleTemplateLabel: 'Load Sample Template',
     step3ProsConsLabel: 'Initial Factors',
-    step3ProsConsSub: 'You can add more later.',
+    step3ProsConsSub: 'Optional: 1 = Low importance, 3 = Medium, 5 = Critical. Higher weights count more.',
     
     emptyStateHeading: 'Make your next big decision with confidence.',
     emptyStateSubheading: 'Transform complex personal, career, and business choices into structured, mathematically-backed comparisons.',

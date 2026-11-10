@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
 import type { DecisionModel, OptionScenarioProjection } from '../src/types/decision';
 import { sanitizeDecisionModel } from '../src/utils/decision-validation';
+import { isUsefulDevilsAdvocateResponse } from '../src/utils/devils-advocate';
 
 export interface ServiceResult {
   status: number;
@@ -161,9 +162,20 @@ function hasCompleteAnalysis(value: unknown, optionCount: number): boolean {
     );
     return optionIds.size === ratedOptions.size;
   });
-  const allOptionsHaveSwot = [...optionIds].every((optionId) =>
-    swot.some((item) => !!item && typeof item === 'object' && 'optionId' in item && item.optionId === optionId)
-  );
+  const allOptionsHaveSwot = options.every((option) => {
+    if (!option || typeof option !== 'object' || !('id' in option)) return false;
+    return (['strength', 'weakness', 'opportunity', 'threat'] as const).every((quadrant) =>
+      swot.some(
+        (item) =>
+          !!item &&
+          typeof item === 'object' &&
+          'optionId' in item &&
+          'quadrant' in item &&
+          item.optionId === option.id &&
+          item.quadrant === quadrant
+      )
+    );
+  });
   const allOptionsHaveScenarios = [...optionIds].every((optionId) => {
     const scenario = scenarios.find((item) =>
       !!item && typeof item === 'object' && 'optionId' in item && item.optionId === optionId
@@ -286,7 +298,9 @@ function makeFallbackDecision(
   }));
   const swot = options.flatMap((option) => [
     { id: `sw-${option.id}-strength`, optionId: option.id, quadrant: 'strength' as const, title: copy.pros[0], detail: option.description, weight: 3, mitigationOrLeverage: option.tagline },
-    { id: `sw-${option.id}-threat`, optionId: option.id, quadrant: 'threat' as const, title: copy.cons[0], detail: copy.impact[2], weight: 3, mitigationOrLeverage: copy.blindSpots[0] },
+    { id: `sw-${option.id}-weakness`, optionId: option.id, quadrant: 'weakness' as const, title: copy.cons[0], detail: copy.impact[2], weight: 3, mitigationOrLeverage: copy.blindSpots[0] },
+    { id: `sw-${option.id}-opportunity`, optionId: option.id, quadrant: 'opportunity' as const, title: copy.pros[1], detail: copy.impact[1], weight: 3, mitigationOrLeverage: copy.blindSpots[0] },
+    { id: `sw-${option.id}-threat`, optionId: option.id, quadrant: 'threat' as const, title: copy.cons[1], detail: copy.impact[3], weight: 3, mitigationOrLeverage: copy.blindSpots[2] },
   ]);
   const scenarios: OptionScenarioProjection[] = options.map((option) => ({
     optionId: option.id,
@@ -364,7 +378,7 @@ Return a complete JSON decision model. The response MUST use exactly this struct
   "blindSpots": ["string"]
 }
 
-Rules: criteria are arrays of scored objects in a "scores" array keyed by optionId - never nest options as keys like {"opt-1": {...}}. scenarios contain ONE object per option, keyed by optionId, with bestCase/mostLikelyCase/worstCase sub-objects - never a flat list of {type, probability, description}. Keep the supplied options' meaning and order. For EACH option include a distinct, decision-specific tagline and description, at least two concrete pros and two concrete cons with impact notes and 1-5 weights, at least four weighted comparison criteria with a score and specific rationale for every option, AT LEAST TWO SWOT ITEMS PER OPTION (e.g. one strength and one threat for each option, plus optional weakness/opportunity items), and best/most-likely/worst scenarios with probabilities totaling 100. Include at least three decision-specific blind spots. Do not reuse generic factors across options. Avoid assigning equal scores merely for symmetry: distinguish options where evidence supports it, but do not invent the user's personal preferences or facts. State uncertainty and scoring assumptions in the summary; only call it a tie when the evidence and supplied weights genuinely support a tie.
+Rules: criteria are arrays of scored objects in a "scores" array keyed by optionId - never nest options as keys like {"opt-1": {...}}. scenarios contain ONE object per option, keyed by optionId, with bestCase/mostLikelyCase/worstCase sub-objects - never a flat list of {type, probability, description}. Keep the supplied options' meaning and order. For EACH option include a distinct, decision-specific tagline and description, at least two concrete pros and two concrete cons with impact notes and 1-5 weights, at least four weighted comparison criteria with a score and specific rationale for every option, and at least one decision-specific SWOT item in EACH of the four quadrants (strength, weakness, opportunity, threat). Each SWOT item must be assigned to its relevant option and have concrete detail and an actionable leverage/mitigation. Also include best/most-likely/worst scenarios with probabilities totaling 100 and at least three decision-specific blind spots. Do not reuse generic factors across options. Avoid assigning equal scores merely for symmetry: distinguish options where evidence supports it, but do not invent the user's personal preferences or facts. State uncertainty and scoring assumptions in the summary; only call it a tie when the evidence and supplied weights genuinely support a tie.
 
 For decisions involving alcohol or another health risk, do not describe either option as safe; distinguish beverage choice from amount consumed, avoid inventing serving sizes or personal preferences, and mention abstaining as the lower-risk baseline when relevant.
 
@@ -430,16 +444,42 @@ export async function generateScenarios(input: unknown): Promise<ServiceResult> 
 export async function challengeDecision(input: unknown): Promise<ServiceResult> {
   const payload = asPayload(input);
   const language = parseLanguage(payload.language);
-  const fallback = {
-    counterThesis: language === 'ru' ? 'Проверьте ключевые допущения: задержки и дополнительные затраты могут изменить преимущество.' : language === 'fi' ? 'Tarkista keskeiset oletukset: viiveet ja lisäkustannukset voivat muuttaa etua.' : 'Test the key assumptions: delays and added costs could change the current lead.',
-    reversalTrigger: language === 'ru' ? 'Пересмотрите решение, если затраты превысят план более чем на 20%.' : language === 'fi' ? 'Arvioi päätös uudelleen, jos kustannukset ylittävät arvion yli 20 %.' : 'Revisit the decision if costs exceed the estimate by more than 20%.',
-    suggestedProsCons: [],
-    suggestedSwot: [],
-  };
-  const result = await generateJson(
-    `Challenge this decision in ${languages[language]}. Return JSON with counterThesis, reversalTrigger, suggestedProsCons, and suggestedSwot. Preserve option IDs. Input: ${JSON.stringify(payload)}`,
+  const options = Array.isArray(payload.options) ? payload.options : [];
+  const optionIds = options
+    .filter((option): option is Record<string, unknown> => !!option && typeof option === 'object')
+    .map((option) => String(option.id ?? ''));
+  const runnerUpOptionId = String(payload.runnerUpOptionId ?? '');
+  if (optionIds.length < 2 || !runnerUpOptionId || !optionIds.includes(runnerUpOptionId)) {
+    return { status: 400, body: { error: 'At least two options and a valid runner-up are required.' } };
+  }
+
+  const result = await generateJson<unknown>(
+    `Act as a rigorous, fair Devil's Advocate for this decision. Write in ${languages[language]} and return JSON with exactly these fields:
+{"counterThesis":"string","reversalTrigger":"string","suggestedProsCons":[{"optionId":"existing option ID","type":"pro or con","title":"string","impactNote":"string","weight":1,"domain":"string"}],"suggestedSwot":[{"optionId":"existing option ID","quadrant":"strength, weakness, opportunity, or threat","title":"string","detail":"string","weight":1,"mitigationOrLeverage":"string"}]}
+
+This must be a useful analysis, not a description of the stress-test feature. Challenge the current lead (${String(payload.leadingOptionName ?? '')}) by making the strongest credible case for the runner-up (${String(payload.runnerUpOptionName ?? '')}). Explain a concrete causal chain: which assumption or evidence matters, how it affects these options, and why that could change the ranking. Refer to the actual roles, factors, criteria, and scores below. Do not repeat generic advice such as "test key assumptions", hypothetical delays, or arbitrary cost thresholds unless the supplied decision specifically supports them.
+
+Write a counterThesis of 2-4 specific sentences. Give one reversalTrigger that is observable and decision-specific: state what evidence/event to check and what result would change the choice. Suggest at least two genuinely new pros/cons and two SWOT factors; across them, include at least one factor for the runner-up option. Suggestions must add concrete information rather than restate existing factors. Make cautious hypotheses explicit and never invent personal circumstances or facts. Weights must be integers from 1 to 5. Use only supplied option IDs and valid enum values. Input: ${JSON.stringify(payload)}`,
     language,
-    fallback
+    null
   );
+  if (!result.generated) {
+    const status = result.failure === 'missing-credential' ? 503 : 502;
+    return {
+      status,
+      body: {
+        error:
+          status === 503
+            ? 'The Devil’s Advocate needs an AI service credential, which is not configured.'
+            : 'The AI could not produce a useful stress test this time. Please try again.',
+      },
+    };
+  }
+  if (!isUsefulDevilsAdvocateResponse(result.data, optionIds, runnerUpOptionId)) {
+    return {
+      status: 502,
+      body: { error: 'The AI response was too generic to use. Please try the stress test again.' },
+    };
+  }
   return { status: 200, body: result.data };
 }

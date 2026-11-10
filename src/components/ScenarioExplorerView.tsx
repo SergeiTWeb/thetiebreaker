@@ -33,9 +33,11 @@ export const ScenarioExplorerView: React.FC<ScenarioExplorerViewProps> = ({
 }) => {
   const [regenerating, setRegenerating] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<string>('all');
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
 
   const handleRegenerateScenarios = async () => {
     setRegenerating(true);
+    setScenarioError(null);
     try {
       const data = await apiPost<{ scenarios?: OptionScenarioProjection[] }>(
         '/api/decision/scenarios',
@@ -50,11 +52,21 @@ export const ScenarioExplorerView: React.FC<ScenarioExplorerViewProps> = ({
           language,
         }
       );
-      if (data && Array.isArray(data.scenarios)) {
-        onUpdateScenarios(data.scenarios);
+      if (
+        !Array.isArray(data?.scenarios) ||
+        !decision.options.every((option) =>
+          data.scenarios?.some((scenario) => scenario.optionId === option.id)
+        )
+      ) {
+        throw new Error('The analysis service did not return scenarios for every option.');
       }
-    } catch {
-
+      onUpdateScenarios(data.scenarios);
+    } catch (err: unknown) {
+      setScenarioError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to regenerate scenarios. Please try again.'
+      );
     } finally {
       setRegenerating(false);
     }
@@ -118,6 +130,16 @@ export const ScenarioExplorerView: React.FC<ScenarioExplorerViewProps> = ({
           </button>
         </div>
       </div>
+
+      {scenarioError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+        >
+          <AlertOctagon className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{scenarioError}</span>
+        </div>
+      )}
 
       <div className="space-y-8">
         {visibleOptions.map((option) => {

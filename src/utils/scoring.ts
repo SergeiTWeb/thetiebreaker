@@ -5,6 +5,15 @@ export function normalizeToFiveScale(val: number): number {
   return Math.max(1, Math.min(5, Math.round(val)));
 }
 
+function scoreWithNeutralEvidence(positive: number, negative: number): number {
+  const neutralEvidence = 1;
+  return Math.round(
+    ((positive + neutralEvidence) /
+      (positive + negative + neutralEvidence * 2)) *
+      1000
+  ) / 10;
+}
+
 export function computeOptionScores(
   decision: DecisionModel,
   frameworkWeights: { prosCons: number; matrix: number; swot: number } = {
@@ -31,12 +40,7 @@ export function computeOptionScores(
       0
     );
     const netProsConsPoints = prosWeightedSum - consWeightedSum;
-    const totalProsConsWeight = prosWeightedSum + consWeightedSum;
-
-    const prosConsScore =
-      totalProsConsWeight > 0
-        ? Math.round((prosWeightedSum / totalProsConsWeight) * 1000) / 10
-        : 50;
+    const prosConsScore = scoreWithNeutralEvidence(prosWeightedSum, consWeightedSum);
 
     let rawMatrixPoints = 0;
     let maxMatrixPoints = 0;
@@ -62,11 +66,7 @@ export function computeOptionScores(
       .filter((item) => item.quadrant === 'weakness' || item.quadrant === 'threat')
       .reduce((acc, item) => acc + normalizeToFiveScale(item.weight), 0);
 
-    const totalSwotWeight = positiveSwotSum + negativeSwotSum;
-    const swotScore =
-      totalSwotWeight > 0
-        ? Math.round((positiveSwotSum / totalSwotWeight) * 1000) / 10
-        : 50;
+    const swotScore = scoreWithNeutralEvidence(positiveSwotSum, negativeSwotSum);
 
     const bestDenom = prosWeightedSum * 1.45 + consWeightedSum * 0.35;
     const bestRaw =

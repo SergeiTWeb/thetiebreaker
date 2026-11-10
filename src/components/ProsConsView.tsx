@@ -198,28 +198,22 @@ export const ProsConsView: React.FC<ProsConsViewProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {t.importanceWeightLabel}
+                  {t.importanceWeightLabel} (1 low — 5 critical)
                 </label>
-                <span className="text-xs font-mono font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
+                <output className="text-xs font-mono font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
                   {t.weightLevels[newWeight]}
-                </span>
+                </output>
               </div>
-              <div className="grid grid-cols-5 gap-1">
-                {[1, 2, 3, 4, 5].map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => setNewWeight(w)}
-                    className={`py-1.5 text-xs font-mono font-semibold rounded border transition-colors tabular-nums ${
-                      newWeight === w
-                        ? 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-500'
-                        : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                step={1}
+                value={newWeight}
+                onChange={(e) => setNewWeight(Number(e.target.value))}
+                aria-label={`${t.importanceWeightLabel}, 1 low to 5 critical`}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-blue-600 dark:accent-blue-500"
+              />
             </div>
           </div>
 
@@ -403,22 +397,16 @@ export const ProsConsView: React.FC<ProsConsViewProps> = ({
                                 {t.weightLevels[w]}
                               </strong>
                             </span>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((level) => (
-                                <button
-                                  key={level}
-                                  type="button"
-                                  onClick={() => onUpdateWeight(item.id, level)}
-                                  className={`w-7 h-6 text-xs font-mono font-semibold rounded transition-colors tabular-nums ${
-                                    w === level
-                                      ? 'bg-emerald-700 text-white'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-700'
-                                  }`}
-                                >
-                                  {level}
-                                </button>
-                              ))}
-                            </div>
+                            <input
+                              type="range"
+                              min={1}
+                              max={5}
+                              step={1}
+                              value={w}
+                              onChange={(e) => onUpdateWeight(item.id, Number(e.target.value))}
+                              aria-label={`${t.importanceWeightLabel} for ${item.title}, 1 low to 5 critical`}
+                              className="w-28 h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-emerald-700 dark:accent-emerald-500"
+                            />
                           </div>
                         </div>
                       );
@@ -483,22 +471,16 @@ export const ProsConsView: React.FC<ProsConsViewProps> = ({
                                 {t.weightLevels[w]}
                               </strong>
                             </span>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((level) => (
-                                <button
-                                  key={level}
-                                  type="button"
-                                  onClick={() => onUpdateWeight(item.id, level)}
-                                  className={`w-7 h-6 text-xs font-mono font-semibold rounded transition-colors tabular-nums ${
-                                    w === level
-                                      ? 'bg-red-700 text-white'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-700'
-                                  }`}
-                                >
-                                  {level}
-                                </button>
-                              ))}
-                            </div>
+                            <input
+                              type="range"
+                              min={1}
+                              max={5}
+                              step={1}
+                              value={w}
+                              onChange={(e) => onUpdateWeight(item.id, Number(e.target.value))}
+                              aria-label={`${t.importanceWeightLabel} for ${item.title}, 1 low to 5 critical`}
+                              className="w-28 h-2 rounded-lg appearance-none cursor-pointer bg-slate-200 dark:bg-slate-700 accent-red-700 dark:accent-red-500"
+                            />
                           </div>
                         </div>
                       );

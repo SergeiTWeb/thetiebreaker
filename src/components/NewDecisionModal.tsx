@@ -8,6 +8,11 @@ interface NewDecisionModalProps {
   isOpen: boolean;
   t: UIStrings;
   language: Language;
+  initialValues?: {
+    dilemma: string;
+    options: string[];
+    context: string;
+  };
   onClose: () => void;
   onCreated: (newDecision: DecisionModel) => void;
 }
@@ -21,85 +26,85 @@ interface DraftFactor {
 
 const QUICK_TEMPLATES = [
   {
-    label: 'Relocate vs. Stay Put',
+    label: 'Career Path',
     dilemma:
-      'Should our household relocate from Austin to Denver for a regional leadership role, or stay in Austin with our current network and 2.85% mortgage?',
+      'Should I continue as an individual contributor or explore a team leadership role?',
     context:
-      'Two school-age kids, 22% base salary increase in Denver, higher housing cost, strong outdoor lifestyle preference.',
-    options: ['Relocate to Denver', 'Stay in Austin'],
+      'I enjoy hands-on problem solving and mentoring teammates, and want to choose a direction for the next stage of my career.',
+    options: ['Continue as a specialist', 'Explore team leadership'],
     factors: [
       {
         optionIndex: 0,
         type: 'pro' as const,
-        title: '22% salary bump & executive promotion',
+        title: 'More time for focused, hands-on work',
         weight: 5,
       },
       {
         optionIndex: 0,
         type: 'con' as const,
-        title: 'Giving up 2.85% mortgage for 6.5% rate',
-        weight: 5,
+        title: 'Fewer opportunities to mentor the wider team',
+        weight: 3,
       },
       {
         optionIndex: 1,
         type: 'pro' as const,
-        title: 'Keep established school & family support network',
+        title: 'More opportunities to coach and support teammates',
         weight: 4,
       },
     ],
   },
   {
-    label: 'Cloud Architecture Migration',
+    label: 'Product Strategy',
     dilemma:
-      'Should we migrate our core multi-tenant SaaS backend from a modular monolith on managed PostgreSQL to event-driven microservices on Kubernetes?',
+      'Should our team launch a focused first version now or run a limited pilot first?',
     context:
-      'Team of 18 engineers, 99.95% SLA requirement, experiencing deployment bottlenecks during peak traffic.',
-    options: ['Migrate to Kubernetes Microservices', 'Optimize Modular Monolith'],
+      'The product team has a working prototype and wants to learn from users while keeping the rollout manageable.',
+    options: ['Launch the focused version', 'Run a limited pilot'],
     factors: [
       {
         optionIndex: 0,
         type: 'pro' as const,
-        title: 'Independent service scaling & fault isolation',
+        title: 'Reach more users and collect broad feedback sooner',
         weight: 4,
       },
       {
         optionIndex: 0,
         type: 'con' as const,
-        title: '6-month DevOps overhead & distributed tracing complexity',
-        weight: 5,
+        title: 'Learn less from a small, closely observed group',
+        weight: 3,
       },
       {
         optionIndex: 1,
         type: 'pro' as const,
-        title: 'Zero migration downtime & simpler debugging',
+        title: 'Get detailed feedback from a smaller group first',
         weight: 5,
       },
     ],
   },
   {
-    label: 'B2B Pricing Model Shift',
+    label: 'Creative Decision',
     dilemma:
-      'Should we transition our flagship SaaS product from per-seat annual subscriptions to usage-based consumption pricing?',
+      'Should I develop my story as a short film or as a serialized podcast?',
     context:
-      '$14M ARR, enterprise buyers want predictable budgets, but PLG self-serve signups want low initial friction.',
-    options: ['Usage-Based Pricing', 'Retain Per-Seat Tiers'],
+      'I have a story concept and a small group of collaborators interested in helping bring it to life.',
+    options: ['Create a short film', 'Create a serialized podcast'],
     factors: [
       {
         optionIndex: 0,
         type: 'pro' as const,
-        title: 'Lower friction for PLG self-serve signups',
+        title: 'Tell the story through visual scenes and performance',
         weight: 4,
       },
       {
         optionIndex: 0,
         type: 'con' as const,
-        title: 'Quarterly revenue volatility & CFO budget pushback',
+        title: 'Coordinate filming locations and schedules',
         weight: 4,
       },
       {
         optionIndex: 1,
         type: 'pro' as const,
-        title: 'Predictable upfront annual cash collection',
+        title: 'Build the story in episodes with a flexible format',
         weight: 5,
       },
     ],
@@ -110,48 +115,51 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
   isOpen,
   t,
   language,
+  initialValues,
   onClose,
   onCreated,
 }) => {
+  const locale: string = language;
+
   const getDefaultOptionName = (index: number) => {
-    if (language === 'ru') return `Вариант ${index + 1}`;
-    if (language === 'fi') return `Vaihtoehto ${index + 1}`;
+    if (locale === 'ru') return `Вариант ${index + 1}`;
+    if (locale === 'fi') return `Vaihtoehto ${index + 1}`;
     return `Option ${index + 1}`;
   };
 
   const getLocalizedDecisionCategory = () => {
-    if (language === 'ru') return 'Стратегическая модель решения';
-    if (language === 'fi') return 'Strateginen päätösmalli';
+    if (locale === 'ru') return 'Стратегическая модель решения';
+    if (locale === 'fi') return 'Strateginen päätösmalli';
     return 'Strategic Decision';
   };
 
   const getLocalizedNow = () => {
-    if (language === 'ru') return 'Только что';
-    if (language === 'fi') return 'Juuri nyt';
+    if (locale === 'ru') return 'Только что';
+    if (locale === 'fi') return 'Juuri nyt';
     return 'Just now';
   };
 
   const getLocalizedPrimaryPath = () =>
-    language === 'ru'
+    locale === 'ru'
       ? 'Основной путь'
-      : language === 'fi'
+      : locale === 'fi'
         ? 'Ensisijainen vaihtoehto'
         : 'Primary path';
 
   const getLocalizedAlternativePath = () =>
-    language === 'ru'
+    locale === 'ru'
       ? 'Альтернативный путь'
-      : language === 'fi'
+      : locale === 'fi'
         ? 'Vaihtoehtoinen reitti'
         : 'Alternative path';
 
-  const [dilemma, setDilemma] = useState('');
-  const [context, setContext] = useState('');
+  const [dilemma, setDilemma] = useState(initialValues?.dilemma ?? '');
+  const [context, setContext] = useState(initialValues?.context ?? '');
   const [optionsInput, setOptionsInput] = useState<string[]>([
-    getDefaultOptionName(0),
-    getDefaultOptionName(1),
+    ...(initialValues?.options ?? [getDefaultOptionName(0), getDefaultOptionName(1)]),
   ]);
   const [userProsCons, setUserProsCons] = useState<DraftFactor[]>([]);
+  const [showManualFactors, setShowManualFactors] = useState(false);
 
   React.useEffect(() => {
     setOptionsInput((prev) =>
@@ -253,9 +261,9 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
                   name: optionsInput[0] || getDefaultOptionName(0),
                   tagline: getLocalizedPrimaryPath(),
                   description:
-                    language === 'ru'
+                    locale === 'ru'
                       ? 'Первый вариант решения.'
-                      : language === 'fi'
+                      : locale === 'fi'
                         ? 'Ensimmäinen päätösvaihtoehto.'
                         : 'First decision path',
                 },
@@ -264,9 +272,9 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
                   name: optionsInput[1] || getDefaultOptionName(1),
                   tagline: getLocalizedAlternativePath(),
                   description:
-                    language === 'ru'
+                    locale === 'ru'
                       ? 'Второй вариант решения.'
-                      : language === 'fi'
+                      : locale === 'fi'
                         ? 'Toinen päätösvaihtoehto.'
                         : 'Second decision path',
                 },
@@ -288,9 +296,9 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
       setError(
         err instanceof Error
           ? err.message
-          : language === 'ru'
+          : locale === 'ru'
             ? 'При анализе решения произошла непредвиденная ошибка.'
-            : language === 'fi'
+            : locale === 'fi'
               ? 'Päätöksen analysoinnissa tapahtui odottamaton virhe.'
               : 'An unexpected error occurred while analyzing your decision.'
       );
@@ -342,6 +350,7 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
                     setContext(tpl.context);
                     setOptionsInput(tpl.options);
                     setUserProsCons(tpl.factors);
+                    setShowManualFactors(true);
                   }}
                   className="px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 rounded-md transition-colors"
                 >
@@ -357,6 +366,7 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
             </label>
             <textarea
               required
+              autoFocus={true}
               rows={2}
               value={dilemma}
               onChange={(e) => setDilemma(e.target.value)}
@@ -407,6 +417,16 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
             </div>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setShowManualFactors((visible) => !visible)}
+            aria-expanded={showManualFactors}
+            className="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            {showManualFactors ? '− Hide manual factors' : '+ Add manual factors before generating (Optional)'}
+          </button>
+
+          {showManualFactors && (
           <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -534,6 +554,7 @@ export const NewDecisionModal: React.FC<NewDecisionModalProps> = ({
               </div>
             )}
           </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1.5">

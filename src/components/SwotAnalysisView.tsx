@@ -357,8 +357,23 @@ export const SwotAnalysisView: React.FC<SwotAnalysisViewProps> = ({
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/70 flex-1">
                   {quadrantItems.length === 0 ? (
-                    <div className="px-5 py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                      {t.noFactorsInQuadrant}
+                    <div className="px-5 py-8 text-center">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t.noFactorsInQuadrant}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewQuadrant(quadrant);
+                          if (selectedOptionId === 'all') {
+                            setNewOptionId(decision.options[0]?.id || 'opt-1');
+                          }
+                          setIsAdding(true);
+                        }}
+                        className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        + Add {meta.title.toLowerCase()} factor
+                      </button>
                     </div>
                   ) : (
                     quadrantItems.map((item) => {
